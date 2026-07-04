@@ -1,0 +1,8 @@
+# runtime state (invoices, mock chain cursors)
+state/
+
+# generated artifacts (invoices, emails, receipts)
+out/
+
+node_modules/
+.env

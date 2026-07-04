@@ -1,0 +1,23 @@
+{
+  "name": "paidfast",
+  "version": "0.1.0",
+  "description": "Crypto invoicing & payment-collection agent for freelancers. Invoice in USDT on X Layer, watch the chain, chase politely, send receipts.",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=18.17"
+  },
+  "bin": {
+    "paidfast": "src/index.js"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "cli": "node src/index.js",
+    "serve": "node src/server.js",
+    "demo": "node scripts/demo.js",
+    "x402-demo": "node scripts/x402-demo.js",
+    "test": "node --test"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
