@@ -45,13 +45,14 @@ export const CHAIN = {
     USDT: {
       symbol: 'USDT',
       decimals: Number(process.env.XLAYER_USDT_DECIMALS || 6),
-      // Intentionally not a real address. Set XLAYER_USDT_ADDRESS after verifying on OKLink.
-      address: process.env.XLAYER_USDT_ADDRESS || '0xTODO_VERIFY_USDT_CONTRACT_ON_OKLINK',
+      // X Layer USDT (bridged USDT0). Verified live: chainId 196, symbol USD₮,
+      // 6 decimals. Override with XLAYER_USDT_ADDRESS if OKX migrates it.
+      address: (process.env.XLAYER_USDT_ADDRESS || '0x779ded0c9e1022225f8e0630b35a9b54be713736').toLowerCase(),
     },
     USDC: {
       symbol: 'USDC',
       decimals: Number(process.env.XLAYER_USDC_DECIMALS || 6),
-      address: process.env.XLAYER_USDC_ADDRESS || '0xTODO_VERIFY_USDC_CONTRACT_ON_OKLINK',
+      address: (process.env.XLAYER_USDC_ADDRESS || '0x74b7f16337b8972027f6196a17a631ac6de26d22').toLowerCase(),
     },
   },
   // Real mode: either a fixed receiving address (with reference-based matching),

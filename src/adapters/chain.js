@@ -191,31 +191,42 @@ async function realCheckForTransfers(invoice, _opts) {
   const token = CHAIN.tokens[invoice.token];
   const cursor = invoice.watch?.lastBlock; // caller persists invoice.watch
 
-  const latestHex = await rpc('eth_blockNumber', []);
-  const latest = Number.parseInt(latestHex, 16);
-  const fromBlock = cursor ? cursor + 1 : Math.max(0, latest - 5_000);
+  const latest = Number.parseInt(await rpc('eth_blockNumber', []), 16);
 
-  const logs = await rpc('eth_getLogs', [{
-    fromBlock: '0x' + fromBlock.toString(16),
-    toBlock: '0x' + latest.toString(16),
-    address: token.address,
-    topics: [
-      TRANSFER_TOPIC,
-      null, // from: anyone
-      '0x' + invoice.address.slice(2).toLowerCase().padStart(64, '0'), // to: us
-    ],
-  }]);
+  // The public X Layer RPC caps eth_getLogs at a 100-block range, so scan in
+  // chunks. First check (no cursor) starts ~1 window back; otherwise continue
+  // from the cursor. Bound total work per check to stay responsive; a regularly
+  // polled invoice never falls behind.
+  const MAX_SPAN = 100;   // RPC hard limit: range must be <= 100 blocks
+  const MAX_CHUNKS = 30;  // ≤ 3000 blocks scanned per check
+  let fromBlock = cursor != null ? cursor + 1 : Math.max(0, latest - MAX_SPAN);
+  if (latest - fromBlock > MAX_SPAN * MAX_CHUNKS) {
+    fromBlock = latest - MAX_SPAN * MAX_CHUNKS + 1;
+  }
 
-  const transfers = (logs || []).map((log) => ({
-    txHash: log.transactionHash,
-    from: '0x' + log.topics[1].slice(26),
-    to: invoice.address,
-    token: invoice.token,
-    amount: Number(BigInt(log.data)) / 10 ** token.decimals,
-    reference: null, // no memo on ERC-20 — see matching strategies in header
-    blockNumber: Number.parseInt(log.blockNumber, 16),
-    at: now().toISOString(),
-  }));
+  const toTopic = '0x' + invoice.address.slice(2).toLowerCase().padStart(64, '0');
+  const transfers = [];
+  for (let start = fromBlock; start <= latest; start += MAX_SPAN) {
+    const end = Math.min(start + MAX_SPAN - 1, latest);
+    const logs = await rpc('eth_getLogs', [{
+      fromBlock: '0x' + start.toString(16),
+      toBlock: '0x' + end.toString(16),
+      address: token.address,
+      topics: [TRANSFER_TOPIC, null, toTopic], // Transfer, from: anyone, to: us
+    }]);
+    for (const log of logs || []) {
+      transfers.push({
+        txHash: log.transactionHash,
+        from: '0x' + log.topics[1].slice(26),
+        to: invoice.address,
+        token: invoice.token,
+        amount: Number(BigInt(log.data)) / 10 ** token.decimals,
+        reference: null, // no memo on ERC-20 — see matching strategies in header
+        blockNumber: Number.parseInt(log.blockNumber, 16),
+        at: now().toISOString(),
+      });
+    }
+  }
 
   return { checkNumber: null, transfers, scannedTo: latest };
 }
